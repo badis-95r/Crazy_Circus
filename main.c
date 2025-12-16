@@ -8,7 +8,7 @@
 /*
  * Fichier : main.c
  * Description : Programme principal du jeu Crazy Circus.
- *               GËre l'initialisation, la boucle de jeu, les scores et les interactions.
+ *               G√®re l'initialisation, la boucle de jeu, les scores et les interactions.
  */
 
 #define MAX_JOUEURS 10
@@ -19,22 +19,15 @@ typedef struct {
     int score;
 } Joueur;
 
-/* Compare pour qsort (tri dÈcroissant score, puis alphabÈtique nom) */
+/* Compare pour qsort (tri d√©croissant score, puis alphab√©tique nom) */
 int compareJoueurs(const void* a, const void* b) {
     const Joueur* j1 = (const Joueur*)a;
     const Joueur* j2 = (const Joueur*)b;
 
     if (j1->score != j2->score) {
-        return j2->score - j1->score; /* DÈcroissant */
+        return j2->score - j1->score; /* D√©croissant */
     }
-    return strcmp(j1->nom, j2->nom); /* AlphabÈtique croissant */
-}
-
-/* Helper pour lire une chaine proprement */
-static void lireChaine(char* buffer, int taille) {
-    if (fgets(buffer, taille, stdin) != NULL) {
-        buffer[strcspn(buffer, "\n")] = 0;
-    }
+    return strcmp(j1->nom, j2->nom); /* Alphab√©tique croissant */
 }
 
 int main(int argc, char* argv[]) {
@@ -42,98 +35,46 @@ int main(int argc, char* argv[]) {
     Joueur joueurs[MAX_JOUEURS];
     int nbJoueurs = 0;
 
-    /* Allocation dynamique pour les noms en mode interactif */
-    char* nomsAlloues[MAX_JOUEURS] = { NULL };
-    char fichierConfig[256] = DEF_FICHIER_CONFIG;
+    /* Configuration file fixed to crazy.cfg in current directory */
+    char fichierConfig[256] = "crazy.cfg";
 
-    /* 1. Gestion des Joueurs (Arguments ou Interactif) */
-    if (argc >= 3) {
-        /* Mode Arguments Ligne de Commande */
-        for (int i = 1; i < argc; i++) {
-            if (nbJoueurs >= MAX_JOUEURS) break;
-
-            /* Check doublon */
-            int existe = 0;
-            for (int k = 0; k < nbJoueurs; k++) {
-                if (strcmp(joueurs[k].nom, argv[i]) == 0) {
-                    existe = 1;
-                    break;
-                }
-            }
-            if (existe) {
-                printf("Erreur: Les noms des joueurs doivent etre distincts (%s).\n", argv[i]);
-                return EXIT_FAILURE;
-            }
-
-            joueurs[nbJoueurs].nom = argv[i];
-            joueurs[nbJoueurs].score = 0;
-            nbJoueurs++;
-        }
+    /* 1. Gestion des Joueurs (Arguments Ligne de Commande uniquement) */
+    /* Usage: prog.exe nom1 nom2 ... */
+    /* argc doit √™tre >= 3 (prog + min 2 joueurs) */
+    
+    if (argc < 3) {
+        printf("Usage: %s <Joueur1> <Joueur2> ...\n", argv[0]);
+        printf("Il faut au moins 2 joueurs.\n");
+        return EXIT_FAILURE;
     }
-    else {
-        /* Mode Interactif (Pour Visual Studio / Lancement double-clic) */
-        printf("--- Mode Interactif ---\n");
 
-        /* Demande du fichier de configuration */
-        printf("Entrez le nom du fichier de configuration (Defaut: %s) : ", DEF_FICHIER_CONFIG);
-        char buffer[100];
-        lireChaine(buffer, sizeof(buffer));
-        if (strlen(buffer) > 0) {
-            strncpy(fichierConfig, buffer, sizeof(fichierConfig) - 1);
-            fichierConfig[sizeof(fichierConfig) - 1] = '\0';
+    for (int i = 1; i < argc; i++) {
+        if (nbJoueurs >= MAX_JOUEURS) {
+            printf("Attention: Nombre maximum de joueurs (%d) atteint. Les suivants sont ignores.\n", MAX_JOUEURS);
+            break;
         }
 
-        printf("Entrez le nombre de joueurs (min 2, max %d) : ", MAX_JOUEURS);
-        lireChaine(buffer, sizeof(buffer));
-        int n = atoi(buffer);
-
-        if (n < 2) {
-            printf("Il faut au moins 2 joueurs.\n");
-            /* Pause pour lire avant fermeture */
-            printf("Appuyez sur Entree pour quitter...");
-            getchar();
+        /* Check doublon */
+        int existe = 0;
+        for (int k = 0; k < nbJoueurs; k++) {
+            if (strcmp(joueurs[k].nom, argv[i]) == 0) {
+                existe = 1;
+                break;
+            }
+        }
+        if (existe) {
+            printf("Erreur: Les noms des joueurs doivent etre distincts (%s).\n", argv[i]);
             return EXIT_FAILURE;
         }
-        if (n > MAX_JOUEURS) n = MAX_JOUEURS;
 
-        for (int i = 0; i < n; i++) {
-            printf("Nom du joueur %d : ", i + 1);
-            lireChaine(buffer, sizeof(buffer));
-            if (strlen(buffer) == 0) {
-                printf("Nom vide invalide.\n");
-                i--; continue;
-            }
-
-            /* Check doublon */
-            int existe = 0;
-            for (int k = 0; k < nbJoueurs; k++) {
-                if (strcmp(joueurs[k].nom, buffer) == 0) {
-                    existe = 1;
-                    break;
-                }
-            }
-            if (existe) {
-                printf("Ce nom est deja pris.\n");
-                i--; continue;
-            }
-
-            /* Allocation et copie */
-            nomsAlloues[nbJoueurs] = (char*)malloc(strlen(buffer) + 1);
-            strcpy(nomsAlloues[nbJoueurs], buffer);
-            joueurs[nbJoueurs].nom = nomsAlloues[nbJoueurs];
-            joueurs[nbJoueurs].score = 0;
-            nbJoueurs++;
-        }
+        joueurs[nbJoueurs].nom = argv[i];
+        joueurs[nbJoueurs].score = 0;
+        nbJoueurs++;
     }
 
     /* 2. Chargement de la config */
     ConfigJeu config;
     if (!chargerConfiguration(&config, fichierConfig)) {
-        /* En mode interactif, on attend avant de fermer pour voir l'erreur */
-        if (argc < 3) {
-            printf("Appuyez sur Entree pour quitter...");
-            getchar();
-        }
         return EXIT_FAILURE;
     }
     if (!validerConfiguration(&config)) {
@@ -141,17 +82,17 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    /* 3. PrÈparation du jeu */
-    srand(time(NULL)); /* Init alÈatoire */
+    /* 3. Pr√©paration du jeu */
+    srand((unsigned int)time(NULL)); /* Init al√©atoire */
 
     Deck deck;
     genererToutesPositions(&config, &deck);
-    /* On pourrait mÈlanger le deck ici ou juste tirer au hasard via estUtilisee (ce que fait tirerNouvelleCarte) */
+    /* On pourrait m√©langer le deck ici ou juste tirer au hasard via estUtilisee (ce que fait tirerNouvelleCarte) */
 
     afficherOrdresPossibles(&config);
 
     /* Etat courant et Etat objectif */
-    EtatJeu* courant = tirerNouvelleCarte(&deck); /* Position de dÈpart alÈatoire */
+    EtatJeu* courant = tirerNouvelleCarte(&deck); /* Position de d√©part al√©atoire */
     EtatJeu* objectif = tirerNouvelleCarte(&deck); /* Premier objectif */
 
     /* Tableau pour suivre qui peut encore jouer ce tour ci */
@@ -198,7 +139,7 @@ int main(int argc, char* argv[]) {
                 continue;
             }
 
-            /* VÈrifie s'il a le droit de jouer */
+            /* V√©rifie s'il a le droit de jouer */
             if (!peutJouer[idJoueur]) {
                 printf("%s ne peut pas jouer\n", nomJoueur);
                 continue;
@@ -209,19 +150,14 @@ int main(int argc, char* argv[]) {
                 continue;
             }
 
-            /* VÈrifie si l'ordre existe dans la config ?
-               Le sujet dit "Si l'ordre LI n'existe pas -> message".
-               Notre executerSequence renvoie 0 si commande inconnue.
-            */
-
-            /* Test de la sÈquence sur une copie de l'Ètat courant */
+            /* Test de la s√©quence sur une copie de l'√©tat courant */
             EtatJeu testState;
             initEtat(&testState);
             copierEtat(courant, &testState);
 
             int codeRetour = executerSequence(&testState, sequence);
 
-            /* VÈrification spÈciale : Trouver le premier ordre inconnu si codeRetour == -1 */
+            /* V√©rification sp√©ciale : Trouver le premier ordre inconnu si codeRetour == -1 */
             if (codeRetour == -1) {
                 /* On doit trouver quel ordre est invalide pour l'afficher */
                 char ordreFaux[3] = "??";
@@ -252,7 +188,7 @@ int main(int argc, char* argv[]) {
                 tourTermine = 1;
             }
             else {
-                /* Si ce n'Ètait pas un ordre inconnu, on affiche le message standard d'erreur */
+                /* Si ce n'√©tait pas un ordre inconnu, on affiche le message standard d'erreur */
                 if (codeRetour != -1) {
                     if (codeRetour == 0) {
                         /* Mouvement impossible (ex: pile vide) ou syntaxe impaire */
@@ -263,24 +199,7 @@ int main(int argc, char* argv[]) {
                         printf("La sequence ne conduit pas a la situation attendue -- %s ne peut plus jouer durant ce tour\n", nomJoueur);
                     }
                 }
-                else {
-                    /* On a deja affichÈ "L'ordre XX n'existe pas", mais faut-il ajouter que le joueur est ÈliminÈ ?
-                       Le sujet montre :
-                       MZ KILI
-                       L'ordre LI n'existe pas
-                       (MZ rejoue ensuite KIKI -> donc il n'est PAS ÈliminÈ ?)
-
-                       Attends, l'annexe montre :
-                       MZ KILI
-                       L'ordre LI n'existe pas
-                       MZ KIKI
-                       La sequence ne conduit pas...
-
-                       Ah ! Donc une commande inconnue N'…LIMINE PAS le joueur !
-                       Contrairement ‡ une mauvaise sÈquence qui l'Èlimine ("MZ ne peut plus jouer durant ce tour").
-                    */
-                }
-
+                
                 if (codeRetour != -1) {
                     peutJouer[idJoueur] = 0;
                     nbJoueursEnLice--;
@@ -302,25 +221,15 @@ int main(int argc, char* argv[]) {
                     tourTermine = 1;
                 }
                 else if (nbJoueursEnLice == 0) {
-                    /* Cas rare : tout le monde a perdu.
-                       Le sujet dit : "Si durant un tour, il n'y a plus qu'un joueur a ne pas avoir proposer de sequence, celui-ci remporte le tour."
-                       Il ne prÈcise pas si tout le monde se trompe (ex: 2 joueurs, les 2 se trompent).
-                       Supposons que personne ne marque si tout le monde est ÈliminÈ (mais avec la condition nbEnLice==1, le dernier gagne avant de jouer).
-                       Sauf si le dernier joue et se trompe aussi ?
-                       Avec ma logique, dËs qu'il ne reste qu'un joueur (aprËs l'erreur de l'avant-dernier), il gagne direct.
-                       Donc nbJoueursEnLice ne peut pas atteindre 0 sauf s'il n'y avait qu'un joueur au dÈpart (impossible par config).
-                    */
+                    /* Tout le monde a perdu le tour */
+                    tourTermine = 1;
                 }
             }
         } /* Fin boucle tour */
 
-        /* PrÈparation tour suivant */
+        /* Pr√©paration tour suivant */
         if (objectif != NULL) {
-            /* L'objectif atteint devient le nouveau dÈpart */
-            /* Attention : 'courant' pointe vers une case du tableau deck.
-               'objectif' pointe vers une autre case.
-               On doit juste changer les pointeurs.
-            */
+            /* L'objectif atteint devient le nouveau d√©part */
             courant = objectif;
 
             /* Tirer nouvel objectif */
@@ -343,8 +252,7 @@ int main(int argc, char* argv[]) {
 
     /* Nettoyage */
     free(peutJouer);
-    /* LibÈration du deck */
-    /* Les Ètats dans deck->positions contiennent des piles qu'il faut vider */
+    /* Lib√©ration du deck */
     for (int i = 0; i < deck.nbPositions; i++) {
         libererEtat(&deck.positions[i]);
     }

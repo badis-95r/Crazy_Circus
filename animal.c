@@ -6,10 +6,10 @@
 
 /*
  * Fichier : animal.c
- * Description : Implémentation de la lecture de configuration.
+ * Description : ImplÃ©mentation de la lecture de configuration.
  */
 
- /* Fonction utilitaire pour dupliquer une chaîne (strdup n'est pas toujours standard C99 strict) */
+ /* Fonction utilitaire pour dupliquer une chaÃ®ne (strdup n'est pas toujours standard C99 strict) */
 static char* monStrDup(const char* s) {
     char* d = malloc(strlen(s) + 1);
     if (d == NULL) return NULL;
@@ -29,12 +29,12 @@ int chargerConfiguration(ConfigJeu* config, const char* nomFichier) {
 
     char ligne[1024]; /* Tampon de lecture large */
 
-    /* --- Lecture de la première ligne : Les Animaux --- */
+    /* --- Lecture de la premiÃ¨re ligne : Les Animaux --- */
     if (fgets(ligne, sizeof(ligne), fichier) != NULL) {
-        /* On retire le saut de ligne à la fin si présent */
+        /* On retire le saut de ligne Ã  la fin si prÃ©sent */
         ligne[strcspn(ligne, "\n")] = 0;
 
-        /* Découpage par espaces */
+        /* DÃ©coupage par espaces */
         char* token = strtok(ligne, " ");
         while (token != NULL && config->nbAnimaux < MAX_ANIMAUX) {
             config->nomsAnimaux[config->nbAnimaux] = monStrDup(token);
@@ -86,20 +86,33 @@ void afficherConfiguration(const ConfigJeu* config) {
 }
 
 int validerConfiguration(const ConfigJeu* config) {
-    /* Règle 1: Au moins 2 animaux */
-    if (config->nbAnimaux < 2) {
-        printf("Erreur Config: Il faut au moins 2 animaux.\n");
+    /* RÃ¨gle 1: Au moins 3 animaux */
+    if (config->nbAnimaux < 3) {
+        printf("Erreur Config: Il faut au moins 3 animaux.\n");
         return 0;
     }
 
-    /* Règle 2: Au moins 3 ordres */
-    /* Note: Le sujet dit "Les ordres sont nécessairement choisis parmi les 5 ordres connus
-       et doivent être au moins trois."
-       Ici on vérifie juste le nombre. La validité des ordres (KI, LO...) sera vérifiée lors du jeu. */
-    if (config->nbOrdres < 3) {
-        printf("Erreur Config: Il faut au moins 3 ordres.\n");
-        return 0;
+    /* RÃ¨gle 2: PrÃ©sence des 5 ordres (KI, LO, SO, NI, MA) */
+    /* Le sujet demande de vÃ©rifier que les 5 commandes sont prÃ©sentes */
+    const char* ordresRequis[] = { "KI", "LO", "SO", "NI", "MA" };
+    int nbRequis = 5;
+    int manquant = 0;
+
+    for (int i = 0; i < nbRequis; i++) {
+        int trouve = 0;
+        for (int j = 0; j < config->nbOrdres; j++) {
+            if (strcmp(config->ordres[j], ordresRequis[i]) == 0) {
+                trouve = 1;
+                break;
+            }
+        }
+        if (!trouve) {
+            printf("Erreur Config: L'ordre obligatoire '%s' est manquant.\n", ordresRequis[i]);
+            manquant = 1;
+        }
     }
+
+    if (manquant) return 0;
 
     return 1;
 }
